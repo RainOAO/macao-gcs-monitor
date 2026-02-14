@@ -1,0 +1,24 @@
+{
+  "smtp_server": "smtp.gmail.com",
+  "smtp_port": 587,
+  "smtp_use_ssl": false,
+  "smtp_username": "your_gmail@gmail.com",
+  "smtp_password": "your_app_password_here",
+  "email_from": "your_gmail@gmail.com",
+  "email_to": ["收件人@example.com"],
+  "email_subject_prefix": "【澳門新聞監控】",
+  "keywords": [
+    "軍團菌",
+    "退伍軍人症",
+    "Legionella",
+    "退伍軍人病",
+    "軍團病"
+  ],
+  "news_url": "https://www.gcs.gov.mo/list/zh-hant/news/",
+  "max_pages": 10,
+  "days_to_check": 2,
+  "check_content": true,
+  "concurrent_requests": 5,
+  "log_level": "INFO",
+  "sent_news_file": "sent_news.json"
+}
