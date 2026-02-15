@@ -69,7 +69,7 @@ echo 環境設置完成！
 echo ========================================
 echo.
 echo 下一步:
-echo 1. 編輯 config.json，配置企業微信 Webhook
+echo 1. 編輯 config.json，配置email
 echo 2. 運行 run.bat --test 進行測試
 echo 3. 運行 setup_task.bat 設置定時任務
 echo.
