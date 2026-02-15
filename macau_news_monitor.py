@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+"""
+澳門新聞局軍團菌新聞監控系統 - Email 推送版本
+自動抓取一天內所有新聞，檢查標題和內文是否包含軍團菌關鍵詞，並通過 Email 推送
+"""
 
 import os
 import sys
@@ -20,10 +24,12 @@ from email.header import Header
 import requests
 from bs4 import BeautifulSoup
 
-"""澳門新聞監控器 """
+
 class MacauNewsMonitorEmail:
-    """初始化監控器"""
-    def __init__(self, config_file: str = "config_email.json"):
+    """澳門新聞監控器 - Email 推送版本"""
+    
+    def __init__(self, config_file: str = "config.json"):
+        """初始化監控器"""
         self.config = self._load_config(config_file)
         self._setup_logging()
         self.sent_news = self._load_sent_news()
@@ -31,9 +37,9 @@ class MacauNewsMonitorEmail:
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
-
-    """加載配置文件"""    
+        
     def _load_config(self, config_file: str) -> dict:
+        """加載配置文件"""
         try:
             with open(config_file, 'r', encoding='utf-8') as f:
                 return json.load(f)
@@ -43,23 +49,23 @@ class MacauNewsMonitorEmail:
         except json.JSONDecodeError as e:
             print(f"錯誤: 配置文件格式錯誤 - {e}")
             sys.exit(1)
-
-    """設置日誌"""            
+            
     def _setup_logging(self):
+        """設置日誌"""
         log_level = getattr(logging, self.config.get('log_level', 'INFO'))
         logging.basicConfig(
             level=log_level,
             format='%(asctime)s - %(levelname)s - %(message)s',
             handlers=[
-                logging.FileHandler('macau_news_monitor_email.log', encoding='utf-8'),
+                logging.FileHandler('macau_news_monitor.log', encoding='utf-8'),
                 logging.StreamHandler()
             ]
         )
         self.logger = logging.getLogger(__name__)
-
-    """加載已發送的新聞記錄"""        
+        
     def _load_sent_news(self) -> Set[str]:
-        sent_file = self.config.get('sent_news_file', 'sent_news_email.json')
+        """加載已發送的新聞記錄"""
+        sent_file = self.config.get('sent_news_file', 'sent_news.json')
         if os.path.exists(sent_file):
             try:
                 with open(sent_file, 'r', encoding='utf-8') as f:
@@ -68,10 +74,10 @@ class MacauNewsMonitorEmail:
             except Exception as e:
                 self.logger.warning(f"加載已發送記錄失敗: {e}")
         return set()
-    
-    """保存已發送的新聞記錄"""   
+        
     def _save_sent_news(self):
-        sent_file = self.config.get('sent_news_file', 'sent_news_email.json')
+        """保存已發送的新聞記錄"""
+        sent_file = self.config.get('sent_news_file', 'sent_news.json')
         try:
             with open(sent_file, 'w', encoding='utf-8') as f:
                 json.dump({
@@ -81,9 +87,9 @@ class MacauNewsMonitorEmail:
         except Exception as e:
             self.logger.error(f"保存已發送記錄失敗: {e}")
     
-    """抓取指定頁面的新聞列表"""
     def fetch_page(self, page_num: int = 0) -> List[Dict[str, str]]:
-        news_url = self.config.get('news_url', 'https://www.gcs.gov.mo/list/zh-hant/news/')
+        """抓取指定頁面的新聞列表"""
+        news_url = self.config.get('news_url', 'https://www.gcs.gov.mo/list/zh-hans/news/')
         
         if page_num == 0:
             url = news_url
@@ -154,8 +160,8 @@ class MacauNewsMonitorEmail:
             self.logger.error(f"解析第 {page_num + 1} 頁失敗: {e}")
             return []
     
-    """抓取多頁新聞列表，並過濾一天內的新聞"""
     def fetch_all_pages(self) -> List[Dict[str, str]]:
+        """抓取多頁新聞列表，並過濾一天內的新聞"""
         max_pages = self.config.get('max_pages', 10)
         days_to_check = self.config.get('days_to_check', 1)
         all_news = []
@@ -206,8 +212,8 @@ class MacauNewsMonitorEmail:
         
         return recent_news
     
-    """抓取單篇新聞的內文"""
     def fetch_article_content(self, url: str) -> str:
+        """抓取單篇新聞的內文"""
         try:
             response = self.session.get(url, timeout=30)
             response.raise_for_status()
@@ -242,8 +248,8 @@ class MacauNewsMonitorEmail:
             self.logger.debug(f"抓取內文失敗 {url}: {e}")
             return ""
     
-    """併發抓取多個新聞的內文"""
     def fetch_contents_concurrent(self, news_list: List[Dict]) -> List[Dict]:
+        """併發抓取多個新聞的內文"""
         if not self.config.get('check_content', True):
             self.logger.info("配置爲不檢查內文，跳過內文抓取")
             return news_list
@@ -273,8 +279,8 @@ class MacauNewsMonitorEmail:
         self.logger.info(f"內文抓取完成: {len(news_list)} 條")
         return news_list
     
-    """過濾包含關鍵詞的新聞（標題或內文）"""
     def filter_news(self, news_list: List[Dict[str, str]]) -> List[Dict[str, str]]:
+        """過濾包含關鍵詞的新聞（標題或內文）"""
         keywords = self.config.get('keywords', [])
         filtered = []
         
@@ -293,8 +299,8 @@ class MacauNewsMonitorEmail:
         
         return filtered
     
-    """構建 HTML 格式的郵件內容"""
     def _build_email_html(self, news_list: List[Dict[str, str]]) -> str:
+        """構建 HTML 格式的郵件內容"""
         now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
         html = f"""<!DOCTYPE html>
@@ -323,7 +329,7 @@ class MacauNewsMonitorEmail:
 <body>
 <div class="container">
   <div class="header">
-    <h1>澳門新聞局 — 軍團菌相關新聞</h1>
+    <h1>🔔 澳門新聞局 — 軍團菌相關新聞</h1>
     <p>監控時間: {now}</p>
   </div>
   <div class="content">
@@ -350,14 +356,14 @@ class MacauNewsMonitorEmail:
         <span class="badge">軍團菌</span>
       </p>
       {"<p class='news-preview'>" + content_preview + "</p>" if content_preview else ""}
-      {"<p class='news-time'>" + publish_time_str + "</p>" if publish_time_str else ""}
+      {"<p class='news-time'>📅 " + publish_time_str + "</p>" if publish_time_str else ""}
     </div>
 """
         
         html += """
   </div>
   <div class="footer">
-     數據來源: <a href="https://www.gcs.gov.mo" style="color:#1a73e8;">澳門新聞局</a>
+    此郵件由澳門新聞局軍團菌新聞監控系統自動發送 · 數據來源: <a href="https://www.gcs.gov.mo" style="color:#1a73e8;">澳門新聞局</a>
   </div>
 </div>
 </body>
@@ -365,8 +371,8 @@ class MacauNewsMonitorEmail:
 """
         return html
     
-    """通過 Email 發送新聞通知"""
     def send_email(self, news_list: List[Dict[str, str]]) -> bool:
+        """通過 Email 發送新聞通知"""
         if not news_list:
             self.logger.info("沒有需要發送的新聞")
             return True
@@ -382,11 +388,11 @@ class MacauNewsMonitorEmail:
         subject_prefix = self.config.get('email_subject_prefix', '【澳門新聞監控】')
         
         if not smtp_username or not smtp_password:
-            self.logger.error("SMTP 用戶名或密碼未配置，請在 config_email.json 中設置")
+            self.logger.error("SMTP 用戶名或密碼未配置，請在 config.json 中設置")
             return False
         
         if not email_to:
-            self.logger.error("收件人未配置，請在 config_email.json 中設置 email_to")
+            self.logger.error("收件人未配置，請在 config.json 中設置 email_to")
             return False
         
         # 確保 email_to 是列表
@@ -403,7 +409,7 @@ class MacauNewsMonitorEmail:
         msg['Subject'] = Header(subject, 'utf-8')
         
         # 純文本備用內容
-        text_content = f"澳門新聞局新聞監控\n\n共發現 {len(news_list)} 條相關新聞:\n\n"
+        text_content = f"澳門新聞局軍團菌新聞監控\n\n共發現 {len(news_list)} 條相關新聞:\n\n"
         for i, news in enumerate(news_list, 1):
             text_content += f"{i}. {news['title']}\n   鏈接: {news['url']}\n\n"
         
@@ -447,10 +453,10 @@ class MacauNewsMonitorEmail:
             self.logger.error(f"郵件發送失敗: {e}")
             return False
     
-    """運行監控"""
     def run(self, test_mode: bool = False):
+        """運行監控"""
         self.logger.info("=" * 80)
-        self.logger.info("澳門新聞局新聞監控系統 開始運行")
+        self.logger.info("澳門新聞局軍團菌監控系統 (Email版) - 開始運行")
         self.logger.info("=" * 80)
         
         # 1. 抓取多頁新聞列表
@@ -498,9 +504,10 @@ class MacauNewsMonitorEmail:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='澳門新聞局新聞監控系統')
+    """主函數"""
+    parser = argparse.ArgumentParser(description='澳門新聞局軍團菌新聞監控系統 (Email版)')
     parser.add_argument('--test', action='store_true', help='測試模式，只顯示結果不發送郵件')
-    parser.add_argument('--config', default='config_email.json', help='配置文件路徑')
+    parser.add_argument('--config', default='config.json', help='配置文件路徑')
     
     args = parser.parse_args()
     
